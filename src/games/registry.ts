@@ -1,7 +1,7 @@
 export type PuzzlePoc = {
   slug: string;
   name: string;
-  nameJa: string;
+  nameKo: string;
   href: string | null;
   blurb: string;
 };
@@ -9,23 +9,23 @@ export type PuzzlePoc = {
 export const PUZZLE_POCS: PuzzlePoc[] = [
   {
     slug: "sozu",
-    name: "Sozu",
-    nameJa: "鹿威し",
+    name: "시시오도시",
+    nameKo: "샘물을 연못까지",
     href: "/sozu",
-    blurb: "대각 대나무 홈통으로 샘의 물이 연못에 닿게 한다.",
+    blurb: "가케히를 돌려 물을 나르고, 시시오도시는 탁 소리로 사슴을 쫓아요.",
   },
   {
     slug: "next-2",
-    name: "soon",
-    nameJa: "—",
+    name: "곧 만나요",
+    nameKo: "",
     href: null,
-    blurb: "다음 퍼즐 POC 자리.",
+    blurb: "다음 퍼즐이 들어올 자리예요.",
   },
   {
     slug: "next-3",
-    name: "soon",
-    nameJa: "—",
+    name: "곧 만나요",
+    nameKo: "",
     href: null,
-    blurb: "다음 퍼즐 POC 자리.",
+    blurb: "다음 퍼즐이 들어올 자리예요.",
   },
 ];

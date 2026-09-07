@@ -21,3 +21,209 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+.sozu-koi {
+  animation: sozu-koi-swim 1.4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes sozu-koi-swim {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(-8deg);
+  }
+  50% {
+    transform: translate(6px, -2px) rotate(10deg);
+  }
+}
+
+.sozu-source-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sozu-source-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes sozu-source-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+.sozu-drip {
+  animation: sozu-drip-fall 1.1s ease-in infinite;
+}
+
+.sozu-drip-late {
+  animation-delay: 0.45s;
+}
+
+@keyframes sozu-drip-fall {
+  0% {
+    opacity: 0.9;
+    transform: translateY(0);
+  }
+  70% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+}
+
+.sozu-restart-pulse {
+  animation: sozu-restart-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes sozu-restart-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.sozu-clack-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sozu-clack-ring 1.35s ease-out;
+}
+
+@keyframes sozu-clack-ring {
+  0% {
+    opacity: 1;
+    transform: scale(0.4);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(3.1);
+  }
+}
+
+.sozu-clack-flash {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sozu-clack-flash 0.5s ease-out;
+}
+
+@keyframes sozu-clack-flash {
+  0% {
+    opacity: 1;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+
+.sozu-tip {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.sozu-nameplate {
+  display: inline-block;
+  font-size: 10px;
+  line-height: 16px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #efe6d2;
+  border: 1px solid #8a6a2a;
+  color: #3a3530;
+  white-space: nowrap;
+}
+
+.sozu-spotlight {
+  box-shadow: 0 0 0 9999px rgba(58, 53, 48, 0.38);
+  border: 2px solid #c45c3e;
+  animation: sozu-spotlight-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes sozu-spotlight-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.sozu-refill-rise {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: sozu-refill-rise 1s ease-out;
+}
+
+@keyframes sozu-refill-rise {
+  from {
+    transform: scaleY(0.08);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.sozu-refill-sparkle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sozu-refill-sparkle 1s ease-out;
+}
+
+@keyframes sozu-refill-sparkle {
+  0% {
+    opacity: 0.2;
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.sozu-refill-cheer {
+  animation: sozu-refill-cheer 1.1s ease-out;
+}
+
+@keyframes sozu-refill-cheer {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.sozu-fail-banner {
+  animation: sozu-fail-pop 0.35s ease-out;
+}
+
+@keyframes sozu-fail-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sozu-card {
+  animation: sozu-fail-pop 0.28s ease-out;
+}

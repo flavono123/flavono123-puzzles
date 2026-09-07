@@ -14,8 +14,8 @@ const mincho = Shippori_Mincho({
 });
 
 export const metadata: Metadata = {
-  title: "flavono123 puzzles",
-  description: "Vercel puzzle POCs. First: Sozu, a shishi-odoshi piping garden.",
+  title: "flavono123 퍼즐",
+  description: "작은 퍼즐들. 첫 정원은 시시오도시.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

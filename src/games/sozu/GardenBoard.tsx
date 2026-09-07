@@ -1,11 +1,20 @@
 "use client";
 
-import { step, type PlayProjection } from "./engine";
-import { DUMP_STEPS, type Cell, type Facing, type Stage } from "./types";
-
-const CELL = 58;
-const GAP = 8;
-const PAD = 36;
+import type { RefObject } from "react";
+import { CELL, GAP, PAD, boardSize, cellCenter, cellOrigin } from "./layout";
+import {
+  type BoardSnap,
+  type LiveState,
+  CLACK_SNAP,
+  POUR_TIME,
+  STARTLE_TIME,
+} from "./live";
+import { type Cell, type Facing, type SozuPhase, type Stage } from "./types";
+import { step, isRotatable } from "./engine";
+import { WaterCanvas } from "./vfx/WaterCanvas";
+import { AtlasSprite } from "./assets/Sprite";
+import { PIECE_NAME, type PieceId } from "./copy";
+import { usePressInspect } from "./usePressInspect";
 
 const C = {
   paper: "#efe6d2",
@@ -23,81 +32,107 @@ const C = {
   deerEar: "#c4895a",
   tanuki: "#6b4a32",
   vermillion: "#c45c3e",
-  crack: "#5c6e48",
 };
-
-function cellPos(r: number, c: number) {
-  return { x: PAD + c * (CELL + GAP), y: PAD + r * (CELL + GAP) };
-}
-
-function boardSize(stage: Stage) {
-  return {
-    w: PAD * 2 + stage.cols * CELL + (stage.cols - 1) * GAP,
-    h: PAD * 2 + stage.rows * CELL + (stage.rows - 1) * GAP + 24,
-  };
-}
 
 export function GardenBoard({
   stage,
   grid,
-  play,
+  snap,
+  liveRef,
   phase,
+  refilling,
   onRotate,
-  onSource,
+  onRestart,
+  onInspect,
 }: {
   stage: Stage;
   grid: Cell[][];
-  play: PlayProjection | null;
-  phase: "idle" | "flow" | "win" | "lose";
+  snap: BoardSnap;
+  liveRef: RefObject<LiveState>;
+  phase: "flow" | "win" | "lose";
+  refilling?: boolean;
   onRotate: (r: number, c: number) => void;
-  onSource: () => void;
+  onRestart: () => void;
+  onInspect: (piece: PieceId) => void;
 }) {
   const { w, h } = boardSize(stage);
-  const deer = play?.deer ?? stage.deer;
-  const pondFill = play?.pond ?? 0;
+  const deer = snap.deer;
+  const pondHit = snap.pondHit;
+  const ratio = snap.reservoirMax > 0 ? snap.reservoir / snap.reservoirMax : 1;
 
   return (
-    <svg
-      viewBox={`0 0 ${w} ${h}`}
-      className="h-auto w-full max-h-[min(72vh,760px)] select-none"
-      role="img"
-      aria-label="garden"
-    >
-      <rect width={w} height={h} fill={C.paper} rx="18" />
-      {Array.from({ length: stage.rows }, (_, r) =>
-        Array.from({ length: stage.cols }, (_, c) => (
-          <GardenCell
-            key={`${r}-${c}`}
-            r={r}
-            c={c}
-            cell={grid[r][c]}
-            stage={stage}
-            play={play}
-            phase={phase}
-            onRotate={onRotate}
-            onSource={onSource}
-          />
-        )),
-      )}
-      <Pond
+    <div className="relative w-full">
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        className="block h-auto w-full max-h-[min(72vh,760px)] select-none"
+        role="img"
+        aria-label="정원"
+      >
+        <rect width={w} height={h} fill={C.paper} rx="18" />
+        {Array.from({ length: stage.rows }, (_, r) =>
+          Array.from({ length: stage.cols }, (_, c) => (
+            <GardenCell
+              key={`${r}-${c}`}
+              r={r}
+              c={c}
+              cell={grid[r][c]}
+              snap={snap}
+              phase={phase}
+              onRotate={onRotate}
+              onInspect={onInspect}
+            />
+          )),
+        )}
+        <DumpGhosts grid={grid} />
+        <Pond
+          stage={stage}
+          wet={pondHit}
+          won={phase === "win"}
+          occupied={deer.some((d) => d.r === stage.pond.r && d.c === stage.pond.c)}
+          onInspect={() => onInspect("pond")}
+        />
+        <Source
+          stage={stage}
+          fill={Math.max(0, ratio)}
+          flowing={phase === "flow"}
+          canRestart={phase === "lose"}
+          refilling={Boolean(refilling)}
+          onRestart={onRestart}
+          onInspect={() => onInspect("source")}
+        />
+        {deer
+          .filter((d) => d.visR > -50)
+          .map((d) => {
+            const hop = d.hop;
+            const startling = Boolean(hop && hop.t < STARTLE_TIME);
+            const running = Boolean(hop && hop.t >= STARTLE_TIME);
+            const flip =
+              hop != null ? hop.toC < hop.fromC : d.visC < d.c - 0.01;
+            return (
+              <DeerSprite
+                key={d.id}
+                r={d.visR}
+                c={d.visC}
+                hidden={d.r < 0 && !d.hop}
+                drinking={
+                  d.r === stage.pond.r && d.c === stage.pond.c && !d.hop
+                }
+                startling={startling}
+                running={running}
+                flip={flip}
+                onInspect={() => onInspect("deer")}
+              />
+            );
+          })}
+        <Tanuki stage={stage} flinch={phase === "flow"} />
+      </svg>
+      <WaterCanvas
         stage={stage}
-        fill={pondFill}
-        won={phase === "win"}
-        occupied={deer.some((d) => d.r === stage.pond.r && d.c === stage.pond.c)}
+        grid={grid}
+        liveRef={liveRef}
+        sourceFacing={stage.source.facing}
       />
-      <Source
-        stage={stage}
-        drops={stage.drops}
-        active={phase === "idle"}
-        onSource={onSource}
-      />
-      {deer
-        .filter((d) => d.r >= 0)
-        .map((d) => (
-          <DeerSprite key={d.id} r={d.r} c={d.c} />
-        ))}
-      <Tanuki stage={stage} flinch={phase === "flow"} />
-    </svg>
+    </div>
   );
 }
 
@@ -105,40 +140,60 @@ function GardenCell({
   r,
   c,
   cell,
-  stage,
-  play,
+  snap,
   phase,
   onRotate,
-  onSource,
+  onInspect,
 }: {
   r: number;
   c: number;
   cell: Cell;
-  stage: Stage;
-  play: PlayProjection | null;
-  phase: "idle" | "flow" | "win" | "lose";
+  snap: BoardSnap;
+  phase: "flow" | "win" | "lose";
   onRotate: (r: number, c: number) => void;
-  onSource: () => void;
+  onInspect: (piece: PieceId) => void;
 }) {
-  const { x, y } = cellPos(r, c);
-  const isSource = r === stage.source.r && c === stage.source.c;
-  const isPond = r === stage.pond.r && c === stage.pond.c;
-  const key = `${r},${c}`;
-  const water = play?.water.get(key) ?? 0;
-  const leak = play?.leaks.get(key) ?? 0;
-  const clack = play?.clacking.has(key) ?? false;
-  const fill = play?.sozuFill.get(key);
-  const rotatable =
-    phase === "idle" && (cell.type === "bamboo" || cell.type === "sozu");
+  const { x, y } = cellOrigin(r, c);
+  const rotatable = phase !== "win" && isRotatable(cell);
+  const sozuState = snap.sozu[`${r},${c}`];
+  const piece: PieceId | null =
+    cell.type === "bamboo" && cell.crack > 0
+      ? "crack"
+      : cell.type === "bamboo"
+        ? "kakehi"
+        : cell.type === "split"
+          ? "split"
+          : cell.type === "sozu"
+            ? "sozu"
+            : cell.type === "rock"
+              ? "rock"
+              : null;
+  const press = usePressInspect(
+    () => {
+      if (piece) onInspect(piece);
+    },
+    rotatable ? () => onRotate(r, c) : undefined,
+  );
 
   return (
     <g
-      transform={`translate(${x} ${y}) ${clack ? "rotate(-6 29 29)" : ""}`}
-      onClick={() => {
-        if (isSource && phase !== "flow") onSource();
-        else if (rotatable) onRotate(r, c);
-      }}
-      style={{ cursor: rotatable || isSource ? "pointer" : "default" }}
+      data-sozu={
+        cell.type === "bamboo" && cell.crack > 0
+          ? "crack"
+          : cell.type === "bamboo"
+            ? "bamboo"
+            : cell.type === "split"
+              ? "split"
+              : cell.type === "sozu"
+                ? "sozu"
+                : cell.type === "rock"
+                  ? "rock"
+                  : undefined
+      }
+      data-piece={piece ?? undefined}
+      transform={`translate(${x} ${y})`}
+      {...press}
+      style={{ cursor: rotatable ? "pointer" : piece ? "help" : "default" }}
     >
       <rect
         width={CELL}
@@ -156,49 +211,136 @@ function GardenCell({
       {cell.type === "sozu" ? (
         <Sozu
           dump={cell.dump}
-          fill={fill ?? cell.fill}
+          fill={sozuState?.fill ?? cell.fill}
           threshold={cell.threshold}
-          clack={clack}
+          phase={sozuState?.phase ?? "fill"}
+          t={sozuState?.t ?? 0}
         />
       ) : null}
-      {water > 0 && !isPond ? <WaterBeads n={water} /> : null}
-      {leak > 0 ? <MossDrip /> : null}
-      {isSource || isPond ? null : null}
     </g>
   );
 }
 
 function Bamboo({ facing, crack }: { facing: Facing; crack: number }) {
-  const d =
-    facing === "SE"
-      ? `M 10 10 L ${CELL - 10} ${CELL - 10}`
-      : `M ${CELL - 10} 10 L 10 ${CELL - 10}`;
+  const se = facing === "SE";
+  const x1 = se ? 10 : CELL - 10;
+  const y1 = 10;
+  const x2 = se ? CELL - 10 : 10;
+  const y2 = CELL - 10;
+  const mx = (x1 + x2) / 2;
+  const my = (y1 + y2) / 2;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  if (crack > 0) {
+    return (
+      <g>
+        <path
+          d={`M ${x1} ${y1} L ${mx - dx * 0.12} ${my - dy * 0.12}`}
+          stroke={C.bambooDark}
+          strokeWidth="9"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <path
+          d={`M ${mx + dx * 0.12} ${my + dy * 0.12} L ${x2} ${y2}`}
+          stroke={C.bambooDark}
+          strokeWidth="9"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <path
+          d={`M ${x1} ${y1} L ${mx - dx * 0.12} ${my - dy * 0.12}`}
+          stroke={C.bamboo}
+          strokeWidth="5"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <path
+          d={`M ${mx + dx * 0.12} ${my + dy * 0.12} L ${x2} ${y2}`}
+          stroke={C.bamboo}
+          strokeWidth="5"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <ellipse
+          className="sozu-drip"
+          cx={mx}
+          cy={my + 8}
+          rx="2.4"
+          ry="3.6"
+          fill={C.water}
+        />
+        <ellipse
+          className="sozu-drip sozu-drip-late"
+          cx={mx + 2}
+          cy={my + 16}
+          rx="1.6"
+          ry="2.6"
+          fill={C.waterDeep}
+        />
+        <circle cx={mx - 5} cy={my + 4} r="1.7" fill={C.moss} />
+        <circle cx={mx + 5} cy={my + 7} r="1.3" fill={C.mossDark} />
+      </g>
+    );
+  }
   return (
     <g>
       <path
-        d={d}
+        d={`M ${x1} ${y1} L ${x2} ${y2}`}
         stroke={C.bambooDark}
         strokeWidth="9"
         strokeLinecap="round"
         fill="none"
       />
       <path
-        d={d}
+        d={`M ${x1} ${y1} L ${x2} ${y2}`}
         stroke={C.bamboo}
         strokeWidth="5"
         strokeLinecap="round"
         fill="none"
       />
       <circle cx={CELL / 2} cy={CELL / 2} r="3.2" fill={C.bambooDark} />
-      {crack > 0 ? (
-        <circle
-          cx={CELL / 2 + (facing === "SE" ? 8 : -8)}
-          cy={CELL / 2 + 10}
-          r="3"
-          fill={C.crack}
-          opacity="0.85"
-        />
-      ) : null}
+    </g>
+  );
+}
+
+function DumpGhosts({ grid }: { grid: Cell[][] }) {
+  const crackMarks: Array<{ r: number; c: number }> = [];
+  for (let r = 0; r < grid.length; r++) {
+    for (let c = 0; c < grid[r].length; c++) {
+      const cell = grid[r][c];
+      if (cell.type === "bamboo" && cell.crack > 0) crackMarks.push({ r, c });
+    }
+  }
+  return (
+    <g style={{ pointerEvents: "none" }}>
+      {crackMarks.map((m) => {
+        const from = cellCenter(m.r, m.c);
+        const to = cellCenter(m.r + 1, m.c);
+        return (
+          <g key={`${m.r}-${m.c}-crack-dump`} data-sozu="crack-ghost">
+            <path
+              d={`M ${from.x} ${from.y + 6} Q ${from.x + 8} ${(from.y + to.y) / 2} ${to.x} ${to.y}`}
+              fill="none"
+              stroke={C.water}
+              strokeWidth="2"
+              strokeDasharray="4 4"
+              opacity="0.5"
+            />
+            <ellipse
+              cx={to.x}
+              cy={to.y + 4}
+              rx="8"
+              ry="5"
+              fill="none"
+              stroke={C.waterDeep}
+              strokeWidth="1.4"
+              strokeDasharray="2 3"
+              opacity="0.75"
+            />
+          </g>
+        );
+      })}
     </g>
   );
 }
@@ -207,45 +349,99 @@ function Sozu({
   dump,
   fill,
   threshold,
-  clack,
+  phase,
+  t,
 }: {
   dump: Facing;
   fill: number;
   threshold: number;
-  clack: boolean;
+  phase: SozuPhase;
+  t: number;
 }) {
-  const dest = step(0, 0, dump, DUMP_STEPS);
-  const angle = dump === "SE" ? 38 : -38;
-  const ratio = Math.min(1, fill / Math.max(1, threshold));
+  const se = dump === "SE";
+  const rest = se ? 38 : -38;
+  const poured = rest + 62;
+  const hit = rest - 22;
+  let angle = rest;
+  let ratio = Math.min(1, fill / Math.max(1, threshold));
+  if (phase === "pour") {
+    const u = Math.min(1, t / POUR_TIME);
+    const ease = u * u * (3 - 2 * u);
+    angle = rest + ease * (poured - rest);
+    ratio = 1 - u;
+  } else if (phase === "clack") {
+    if (t < CLACK_SNAP) {
+      const u = Math.min(1, t / CLACK_SNAP);
+      const snap = 1 - (1 - u) * (1 - u);
+      angle = poured + snap * (hit - poured);
+    } else {
+      const u = Math.min(1, (t - CLACK_SNAP) / 0.28);
+      angle = hit + u * (rest - 6 - hit);
+    }
+    ratio = 0;
+  } else if (phase === "recover") {
+    angle = rest;
+    ratio = 0;
+  }
   return (
-    <g transform={`translate(29 29) rotate(${clack ? angle + 50 : angle})`}>
-      <rect
-        x="-7"
-        y="-22"
-        width="14"
-        height="44"
-        rx="6"
-        fill={C.bamboo}
-        stroke={C.bambooDark}
-        strokeWidth="1.5"
-      />
-      <rect
-        x="-4"
-        y={14 - 28 * ratio}
-        width="8"
-        height={28 * ratio}
-        rx="3"
-        fill={C.water}
-      />
-      <line
-        x1="0"
-        y1="22"
-        x2={dest.c * 6}
-        y2="28"
-        stroke={C.stone}
-        strokeWidth="1"
-        opacity="0.0"
-      />
+    <g>
+      <ellipse cx="29" cy="48" rx="11" ry="5" fill={C.stone} />
+      <rect x="16" y="26" width="4" height="22" rx="1" fill={C.stoneLight} />
+      <rect x="38" y="26" width="4" height="22" rx="1" fill={C.stoneLight} />
+      <line x1="16" y1="30" x2="42" y2="30" stroke={C.stone} strokeWidth="2" />
+      {phase === "clack" ? (
+        <>
+          <circle
+            className="sozu-clack-ring"
+            cx="29"
+            cy="48"
+            r="26"
+            fill="none"
+            stroke={C.ink}
+            strokeWidth="2.4"
+          />
+          {t < 0.55 ? (
+            <ellipse
+              className="sozu-clack-flash"
+              cx={se ? 18 : 40}
+              cy="46"
+              rx="7"
+              ry="5"
+              fill={C.paper}
+              opacity="0.9"
+            />
+          ) : null}
+        </>
+      ) : null}
+      <g
+        transform={`translate(29 32) rotate(${angle})`}
+        style={{
+          transition: phase === "fill" ? "transform 280ms ease-out" : "none",
+        }}
+      >
+        <rect
+          x="-7"
+          y="-24"
+          width="14"
+          height="40"
+          rx="6"
+          fill={C.bamboo}
+          stroke={C.bambooDark}
+          strokeWidth="1.5"
+        />
+        <rect
+          x="-4"
+          y={10 - 26 * ratio}
+          width="8"
+          height={26 * ratio}
+          rx="3"
+          fill={C.water}
+        />
+        <path d="M-5 16 L0 22 L5 16" fill={C.bambooDark} />
+        {phase === "pour" && ratio > 0.08 ? (
+          <ellipse cx="0" cy="26" rx="3.2" ry="5" fill={C.water} opacity="0.9" />
+        ) : null}
+      </g>
     </g>
   );
 }
@@ -253,27 +449,46 @@ function Sozu({
 function SplitStone() {
   return (
     <g>
-      <rect
-        x="12"
-        y="14"
-        width="34"
-        height="30"
-        rx="6"
+      <path
+        d="M14 18 C12 28 14 40 22 46 L36 46 C44 40 46 28 44 18 C38 12 20 12 14 18 Z"
+        fill={C.stone}
+      />
+      <path
+        d="M18 20 C17 28 19 38 24 43 L34 43 C39 38 41 28 40 20 C36 16 22 16 18 20 Z"
         fill={C.stoneLight}
-        stroke={C.stone}
-        strokeWidth="1.5"
       />
       <path
-        d="M29 18 L40 40"
+        d="M29 17 L29 28"
         stroke={C.waterDeep}
-        strokeWidth="2"
+        strokeWidth="5"
         fill="none"
+        strokeLinecap="round"
       />
       <path
-        d="M29 18 L18 40"
-        stroke={C.waterDeep}
-        strokeWidth="2"
+        d="M29 28 L42 44"
+        stroke={C.water}
+        strokeWidth="4.5"
         fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M29 28 L16 44"
+        stroke={C.water}
+        strokeWidth="4.5"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M38 40 L46 48"
+        stroke={C.bamboo}
+        strokeWidth="3.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M20 40 L12 48"
+        stroke={C.bamboo}
+        strokeWidth="3.5"
+        strokeLinecap="round"
       />
     </g>
   );
@@ -292,166 +507,251 @@ function Rock() {
   );
 }
 
-function WaterBeads({ n }: { n: number }) {
-  const count = Math.min(4, n);
+function Nameplate({ label }: { label: string }) {
   return (
-    <g>
-      {Array.from({ length: count }, (_, i) => (
-        <circle
-          key={i}
-          cx={CELL / 2 + (i - (count - 1) / 2) * 9}
-          cy={CELL / 2}
-          r="5"
-          fill={C.water}
-          stroke={C.waterDeep}
-          strokeWidth="1"
-        />
-      ))}
-    </g>
-  );
-}
-
-function MossDrip() {
-  return (
-    <g>
-      <circle cx={CELL / 2} cy={CELL - 8} r="4" fill={C.moss} />
-      <circle cx={CELL / 2 + 6} cy={CELL - 6} r="2.5" fill={C.mossDark} />
-    </g>
+    <foreignObject x="4" y="-16" width="72" height="20" style={{ pointerEvents: "none" }}>
+      <div className="sozu-nameplate">{label}</div>
+    </foreignObject>
   );
 }
 
 function Source({
   stage,
-  drops,
-  active,
-  onSource,
+  fill,
+  flowing,
+  canRestart,
+  refilling,
+  onRestart,
+  onInspect,
 }: {
   stage: Stage;
-  drops: number;
-  active: boolean;
-  onSource: () => void;
+  fill: number;
+  flowing: boolean;
+  canRestart: boolean;
+  refilling: boolean;
+  onRestart: () => void;
+  onInspect: () => void;
 }) {
-  const { x, y } = cellPos(stage.source.r, stage.source.c);
+  const { x, y } = cellOrigin(stage.source.r, stage.source.c);
   const spout = step(0, 0, stage.source.facing);
+  const shown = refilling ? 1 : fill;
+  const waterH = 18 * Math.max(0, shown);
+  const press = usePressInspect(onInspect, canRestart ? onRestart : undefined);
   return (
     <g
+      data-sozu="source"
+      data-piece="source"
       transform={`translate(${x} ${y})`}
-      onClick={onSource}
-      style={{ cursor: active ? "pointer" : "default" }}
+      {...press}
+      style={{ cursor: canRestart ? "pointer" : "help" }}
     >
-      <ellipse
-        cx={CELL / 2}
-        cy={CELL / 2 + 6}
-        rx="18"
-        ry="13"
-        fill={C.stone}
-      />
-      <ellipse
-        cx={CELL / 2}
-        cy={CELL / 2 + 4}
-        rx="12"
-        ry="8"
-        fill={C.waterDeep}
-      />
-      {Array.from({ length: drops }, (_, i) => (
-        <circle
-          key={i}
-          cx={CELL / 2 - 10 + i * 7}
-          cy={12}
-          r="3.4"
-          fill={C.water}
-          stroke={C.waterDeep}
-          strokeWidth="0.8"
+      <Nameplate label={PIECE_NAME.source} />
+      <defs>
+        <clipPath id="sozu-bowl">
+          <ellipse cx={CELL / 2} cy={CELL / 2 + 5} rx="13" ry="9" />
+        </clipPath>
+      </defs>
+      <ellipse cx={CELL / 2} cy={CELL / 2 + 8} rx="21" ry="15" fill={C.stone} />
+      <ellipse cx={CELL / 2} cy={CELL / 2 + 5} rx="13" ry="9" fill="#cbbfa4" />
+      <g clipPath="url(#sozu-bowl)">
+        <rect
+          className={refilling ? "sozu-refill-rise" : undefined}
+          x={CELL / 2 - 13}
+          y={CELL / 2 + 5 + 9 - waterH}
+          width="26"
+          height={waterH}
+          fill={C.waterDeep}
         />
-      ))}
+        {shown > 0.04 ? (
+          <ellipse
+            className={refilling ? "sozu-refill-sparkle" : undefined}
+            cx={CELL / 2}
+            cy={CELL / 2 + 5 + 9 - waterH}
+            rx="12"
+            ry="3.2"
+            fill={C.water}
+          />
+        ) : null}
+      </g>
+      {refilling ? (
+        <text
+          x={CELL / 2}
+          y={CELL / 2 - 18}
+          textAnchor="middle"
+          fill={C.waterDeep}
+          fontSize="11"
+          className="sozu-refill-cheer"
+        >
+          첨벙
+        </text>
+      ) : null}
       <line
         x1={CELL / 2}
-        y1={CELL / 2 + 4}
-        x2={CELL / 2 + spout.c * 16}
-        y2={CELL / 2 + 4 + spout.r * 16}
-        stroke={C.bamboo}
-        strokeWidth="4"
+        y1={CELL / 2 + 5}
+        x2={CELL / 2 + spout.c * 18}
+        y2={CELL / 2 + 5 + spout.r * 18}
+        stroke={C.bambooDark}
+        strokeWidth="6"
         strokeLinecap="round"
       />
-      {active ? (
-        <circle
-          cx={CELL / 2}
-          cy={CELL / 2 + 4}
-          r="22"
-          fill="none"
-          stroke={C.vermillion}
-          strokeWidth="1.2"
-          opacity="0.55"
+      <line
+        x1={CELL / 2}
+        y1={CELL / 2 + 5}
+        x2={CELL / 2 + spout.c * 18}
+        y2={CELL / 2 + 5 + spout.r * 18}
+        stroke={C.bamboo}
+        strokeWidth="3.5"
+        strokeLinecap="round"
+      />
+      {flowing && fill > 0.04 && !refilling ? (
+        <line
+          x1={CELL / 2 + spout.c * 8}
+          y1={CELL / 2 + 5 + spout.r * 8}
+          x2={CELL / 2 + spout.c * 22}
+          y2={CELL / 2 + 5 + spout.r * 22}
+          stroke={C.water}
+          strokeWidth="3"
+          strokeLinecap="round"
+          opacity="0.9"
         />
       ) : null}
+      {canRestart ? (
+        <circle
+          className="sozu-restart-pulse"
+          cx={CELL / 2}
+          cy={CELL / 2 + 5}
+          r="24"
+          fill="none"
+          stroke={C.vermillion}
+          strokeWidth="1.8"
+        />
+      ) : null}
+      <rect width={CELL} height={CELL} fill="transparent" pointerEvents="all" />
     </g>
   );
 }
 
 function Pond({
   stage,
-  fill,
+  wet,
   won,
   occupied,
+  onInspect,
 }: {
   stage: Stage;
-  fill: number;
+  wet: boolean;
   won: boolean;
   occupied: boolean;
+  onInspect: () => void;
 }) {
-  const { x, y } = cellPos(stage.pond.r, stage.pond.c);
-  const ratio = Math.min(1, fill / Math.max(1, stage.need));
+  const { x, y } = cellOrigin(stage.pond.r, stage.pond.c);
+  const press = usePressInspect(onInspect);
   return (
-    <g transform={`translate(${x} ${y})`} style={{ pointerEvents: "none" }}>
+    <g
+      transform={`translate(${x} ${y})`}
+      data-sozu="pond"
+      data-piece="pond"
+      {...press}
+      style={{ cursor: "help" }}
+    >
+      <Nameplate label={PIECE_NAME.pond} />
+      <ellipse cx={CELL / 2} cy={CELL / 2 + 10} rx="24" ry="11" fill={C.stone} />
+      <ellipse cx="12" cy={CELL / 2 + 18} rx="6" ry="4" fill={C.stoneLight} />
+      <ellipse cx={CELL - 10} cy={CELL / 2 + 16} rx="5" ry="3.5" fill={C.stone} />
       <ellipse
         cx={CELL / 2}
-        cy={CELL / 2 + 6}
-        rx="22"
-        ry="16"
-        fill={C.stone}
+        cy={CELL / 2 + 4}
+        rx="15"
+        ry="10"
+        fill={occupied ? C.sand : wet ? C.waterDeep : "#cbbfa4"}
+        stroke={C.stone}
+        strokeWidth="2.4"
       />
-      <ellipse
-        cx={CELL / 2}
-        cy={CELL / 2 + 6}
-        rx="16"
-        ry="11"
-        fill={occupied ? C.sand : ratio > 0 ? C.waterDeep : "#cbbfa4"}
-      />
-      {ratio > 0 && !occupied ? (
+      {wet && !occupied ? (
         <ellipse
           cx={CELL / 2}
-          cy={CELL / 2 + 7}
-          rx={12 * ratio + 4}
-          ry={7 * ratio + 3}
+          cy={CELL / 2 + 5}
+          rx="12"
+          ry="7"
           fill={C.water}
           opacity="0.9"
         />
       ) : null}
-      {won ? (
-        <g transform={`translate(${CELL / 2 - 8} ${CELL / 2})`}>
-          <ellipse cx="8" cy="8" rx="7" ry="4" fill={C.vermillion} />
-          <circle cx="13" cy="8" r="1.2" fill={C.ink} />
+      {won && !occupied ? (
+        <g className="sozu-koi">
+          <AtlasSprite name="koi" x={CELL / 2 - 16} y={CELL / 2 - 12} width={32} height={32} />
         </g>
       ) : null}
+      <rect width={CELL} height={CELL} fill="transparent" pointerEvents="all" />
     </g>
   );
 }
 
-function DeerSprite({ r, c }: { r: number; c: number }) {
-  const { x, y } = cellPos(r, c);
+function DeerSprite({
+  r,
+  c,
+  hidden,
+  drinking,
+  startling,
+  running,
+  flip,
+  onInspect,
+}: {
+  r: number;
+  c: number;
+  hidden?: boolean;
+  drinking?: boolean;
+  startling?: boolean;
+  running?: boolean;
+  flip?: boolean;
+  onInspect: () => void;
+}) {
+  const x = PAD + c * (CELL + GAP);
+  const y = PAD + r * (CELL + GAP);
+  const pose = running ? "deer-run" : drinking ? "deer-drink" : "deer-stand";
+  const scale = running ? 1.22 : startling ? 1.12 : 1;
+  const sx = (flip ? -1 : 1) * scale;
+  const press = usePressInspect(onInspect);
   return (
-    <g transform={`translate(${x + 8} ${y + 10})`} style={{ pointerEvents: "none" }}>
-      <ellipse cx="22" cy="28" rx="16" ry="10" fill={C.deer} />
-      <circle cx="34" cy="20" r="7" fill={C.deer} />
-      <polygon points="30,14 29,4 33,12" fill={C.deerEar} />
-      <polygon points="38,14 40,5 42,13" fill={C.deerEar} />
-      <circle cx="36" cy="19" r="1.1" fill={C.ink} />
+    <g
+      data-sozu="deer"
+      data-piece="deer"
+      transform={`translate(${x - 4} ${y + 4})`}
+      style={{ opacity: hidden ? 0 : 1, cursor: hidden ? "default" : "help" }}
+      {...(hidden ? {} : press)}
+    >
+      {startling ? (
+        <text
+          x="26"
+          y="-4"
+          textAnchor="middle"
+          fill={C.ink}
+          fontSize="14"
+          fontWeight="700"
+        >
+          !
+        </text>
+      ) : null}
+      <g transform={`translate(26 19) scale(${sx} ${scale}) translate(-26 -19)`}>
+        {running ? (
+          <g opacity="0.55" stroke={C.ink} strokeLinecap="round" fill="none">
+            <path d="M-2 18 L-16 14" strokeWidth="1.6" />
+            <path d="M-4 24 L-20 22" strokeWidth="1.3" />
+            <path d="M0 28 L-14 32" strokeWidth="1.1" />
+          </g>
+        ) : null}
+        {running || startling ? (
+          <ellipse cx="22" cy="34" rx="10" ry="3.2" fill={C.sand} opacity="0.7" />
+        ) : null}
+        <AtlasSprite name={pose} width={52} height={38} />
+      </g>
+      <rect width="52" height="38" fill="transparent" pointerEvents={hidden ? "none" : "all"} />
     </g>
   );
 }
 
 function Tanuki({ stage, flinch }: { stage: Stage; flinch: boolean }) {
-  const { x, y } = cellPos(stage.pond.r, stage.pond.c);
+  const { x, y } = cellOrigin(stage.pond.r, stage.pond.c);
   return (
     <g
       transform={`translate(${x + CELL + 6} ${y + 8}) rotate(${flinch ? -12 : 0} 12 18)`}

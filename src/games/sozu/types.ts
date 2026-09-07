@@ -64,6 +64,8 @@ export type SimResult = {
   pond: number;
 };
 
-export const DUMP_STEPS = 2;
-export const CLACK_RANGE = 2;
+/** Adjacent cells only. The clack is not a wide scare field. */
+export const CLACK_RANGE = 1;
 export const TICK_MS = 320;
+
+export type SozuPhase = "fill" | "pour" | "clack" | "recover";

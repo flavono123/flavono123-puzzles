@@ -8,10 +8,10 @@ export default function Home() {
         <header className="space-y-2">
           <p className="text-sm tracking-[0.2em] text-[#8a6a2a]">flavono123</p>
           <h1 className="font-[family-name:var(--font-mincho)] text-4xl">
-            puzzles
+            퍼즐
           </h1>
           <p className="max-w-sm text-[#6b6560]">
-            Vercel에 올리는 작은 퍼즐 POC들. 규칙은 보드가 설명한다.
+            작고 짧은 퍼즐들. 규칙은 정원이 설명해 줘요.
           </p>
         </header>
         <ul className="flex flex-col gap-3">
@@ -24,7 +24,7 @@ export default function Home() {
               >
                 <div className="flex items-baseline justify-between">
                   <span className="text-lg">{game.name}</span>
-                  <span className="text-sm text-[#8a6a2a]">{game.nameJa}</span>
+                  <span className="text-sm text-[#8a6a2a]">{game.nameKo}</span>
                 </div>
                 <p className="mt-1 text-sm text-[#6b6560]">{game.blurb}</p>
               </div>

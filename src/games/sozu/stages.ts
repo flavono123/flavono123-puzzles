@@ -11,7 +11,7 @@ function bamboo(facing: Facing, crack = 0): Cell {
   return { type: "bamboo", facing, crack };
 }
 
-function sozu(dump: Facing, threshold: number): Cell {
+function sozu(dump: Facing, threshold = 12): Cell {
   return { type: "sozu", dump, threshold, fill: 0 };
 }
 
@@ -111,15 +111,17 @@ export const STAGES: Stage[] = [
   },
   {
     id: 5,
-    rows: 4,
+    rows: 5,
     cols: 6,
-    drops: 3,
-    need: 2,
+    drops: 1,
+    need: 1,
     source: { r: 0, c: 2, facing: "SE" },
-    pond: { r: 2, c: 4 },
+    pond: { r: 3, c: 4 },
     grid: (() => {
-      const g = emptyGrid(4, 6);
-      put(g, 1, 3, bamboo("SE", 1));
+      const g = emptyGrid(5, 6);
+      put(g, 1, 3, bamboo("SW"));
+      put(g, 2, 4, bamboo("SE", 1));
+      put(g, 2, 2, rock());
       return g;
     })(),
     deer: [],
@@ -129,16 +131,15 @@ export const STAGES: Stage[] = [
     id: 6,
     rows: 7,
     cols: 8,
-    drops: 3,
-    need: 2,
+    drops: 1,
+    need: 1,
     source: { r: 0, c: 3, facing: "SE" },
     pond: { r: 5, c: 4 },
     grid: (() => {
       const g = emptyGrid(7, 8);
       put(g, 1, 4, bamboo("SE"));
       put(g, 2, 5, bamboo("SE", 1));
-      put(g, 3, 6, bamboo("SW", 1));
-      put(g, 4, 5, bamboo("SW"));
+      put(g, 3, 5, rock());
       put(g, 2, 3, bamboo("SE"));
       put(g, 3, 4, bamboo("SW"));
       put(g, 4, 3, bamboo("SE"));
@@ -146,15 +147,7 @@ export const STAGES: Stage[] = [
       return g;
     })(),
     deer: [],
-    solution: sol(
-      [1, 4, "SW"],
-      [2, 5, "SE"],
-      [3, 6, "SW"],
-      [4, 5, "SW"],
-      [2, 3, "SE"],
-      [3, 4, "SW"],
-      [4, 3, "SE"],
-    ),
+    solution: sol([1, 4, "SW"]),
   },
   {
     id: 7,
@@ -169,7 +162,7 @@ export const STAGES: Stage[] = [
       put(g, 1, 4, bamboo("SE"));
       put(g, 2, 5, split());
       put(g, 3, 4, bamboo("SE"));
-      put(g, 4, 5, bamboo("SW"));
+      put(g, 4, 5, bamboo("SE"));
       put(g, 2, 3, bamboo("SW"));
       put(g, 3, 2, bamboo("SE"));
       put(g, 4, 3, bamboo("SE"));
@@ -180,7 +173,7 @@ export const STAGES: Stage[] = [
     solution: sol(
       [1, 4, "SW"],
       [3, 4, "SE"],
-      [4, 5, "SW"],
+      [4, 5, "SE"],
       [2, 3, "SW"],
       [3, 2, "SE"],
       [4, 3, "SE"],
@@ -188,194 +181,202 @@ export const STAGES: Stage[] = [
   },
   {
     id: 8,
-    rows: 6,
+    rows: 8,
     cols: 7,
     drops: 1,
     need: 1,
     source: { r: 0, c: 2, facing: "SE" },
-    pond: { r: 4, c: 2 },
+    pond: { r: 7, c: 3 },
     grid: (() => {
-      const g = emptyGrid(6, 7);
-      put(g, 1, 3, bamboo("SE"));
-      put(g, 2, 4, sozu("SW", 1));
-      put(g, 3, 3, rock());
+      const g = emptyGrid(8, 7);
+      put(g, 1, 3, split());
+      put(g, 2, 4, sozu("SE"));
       put(g, 3, 5, rock());
+      put(g, 2, 2, bamboo("SE"));
+      put(g, 3, 1, bamboo("SE"));
+      put(g, 4, 2, bamboo("SE"));
+      put(g, 5, 3, bamboo("SW"));
+      put(g, 6, 2, bamboo("SE"));
       return g;
     })(),
     deer: [],
-    solution: sol([1, 3, "SE"], [2, 4, "SW"]),
+    solution: sol([2, 2, "SW"]),
   },
   {
     id: 9,
-    rows: 6,
-    cols: 8,
+    rows: 8,
+    cols: 7,
     drops: 1,
     need: 1,
     source: { r: 0, c: 2, facing: "SE" },
-    pond: { r: 4, c: 2 },
+    pond: { r: 7, c: 3 },
     grid: (() => {
-      const g = emptyGrid(6, 8);
-      put(g, 1, 3, bamboo("SE"));
-      put(g, 2, 4, sozu("SE", 1));
-      put(g, 3, 3, rock());
+      const g = emptyGrid(8, 7);
+      put(g, 1, 3, split());
+      put(g, 2, 4, sozu("SE"));
       put(g, 3, 5, rock());
-      put(g, 4, 6, rock());
+      put(g, 2, 2, bamboo("SE"));
+      put(g, 3, 1, bamboo("SW"));
+      put(g, 4, 2, bamboo("SE"));
+      put(g, 5, 3, bamboo("SW"));
+      put(g, 6, 2, bamboo("SE"));
       return g;
     })(),
     deer: [],
-    solution: sol([1, 3, "SE"], [2, 4, "SW"]),
+    solution: sol([2, 2, "SW"], [3, 1, "SE"]),
   },
   {
     id: 10,
     rows: 6,
-    cols: 8,
+    cols: 7,
     drops: 1,
     need: 1,
     source: { r: 0, c: 2, facing: "SE" },
     pond: { r: 4, c: 2 },
     grid: (() => {
-      const g = emptyGrid(6, 8);
-      put(g, 1, 3, bamboo("SW"));
-      put(g, 2, 2, bamboo("SE"));
-      put(g, 2, 4, sozu("SW", 1));
-      put(g, 3, 1, rock());
-      put(g, 3, 3, rock());
+      const g = emptyGrid(6, 7);
+      put(g, 1, 3, bamboo("SE"));
+      put(g, 2, 4, sozu("SE"));
       put(g, 3, 5, rock());
+      put(g, 2, 2, bamboo("SE"));
+      put(g, 3, 3, bamboo("SW"));
       return g;
     })(),
     deer: [],
-    solution: sol([1, 3, "SE"], [2, 2, "SE"], [2, 4, "SW"]),
+    solution: sol([1, 3, "SW"], [2, 2, "SE"], [3, 3, "SW"]),
   },
   {
     id: 11,
-    rows: 8,
-    cols: 9,
+    rows: 7,
+    cols: 8,
     drops: 1,
     need: 1,
-    source: { r: 0, c: 2, facing: "SE" },
-    pond: { r: 6, c: 4 },
+    source: { r: 0, c: 3, facing: "SE" },
+    pond: { r: 5, c: 4 },
     grid: (() => {
-      const g = emptyGrid(8, 9);
-      put(g, 1, 3, bamboo("SE"));
-      put(g, 2, 4, sozu("SW", 1));
-      put(g, 4, 6, sozu("SE", 1));
-      put(g, 3, 5, rock());
-      put(g, 5, 5, rock());
+      const g = emptyGrid(7, 8);
+      put(g, 1, 4, bamboo("SE"));
+      put(g, 2, 5, sozu("SE"));
+      put(g, 3, 6, rock());
+      put(g, 2, 3, bamboo("SE"));
+      put(g, 3, 4, bamboo("SW"));
+      put(g, 4, 3, bamboo("SE"));
       return g;
     })(),
     deer: [],
-    solution: sol([1, 3, "SE"], [2, 4, "SE"], [4, 6, "SW"]),
+    solution: sol([1, 4, "SW"], [2, 3, "SE"], [3, 4, "SW"], [4, 3, "SE"]),
   },
   {
     id: 12,
-    rows: 6,
-    cols: 7,
-    drops: 3,
+    rows: 8,
+    cols: 8,
+    drops: 1,
     need: 1,
-    source: { r: 0, c: 2, facing: "SE" },
-    pond: { r: 4, c: 2 },
+    source: { r: 0, c: 3, facing: "SE" },
+    pond: { r: 7, c: 4 },
     grid: (() => {
-      const g = emptyGrid(6, 7);
-      put(g, 1, 3, bamboo("SW", 1));
-      put(g, 2, 4, sozu("SW", 2));
-      put(g, 3, 3, rock());
+      const g = emptyGrid(8, 8);
+      put(g, 1, 4, split());
+      put(g, 2, 5, sozu("SE"));
+      put(g, 3, 6, rock());
+      put(g, 2, 3, bamboo("SE"));
+      put(g, 3, 4, bamboo("SE"));
+      put(g, 4, 3, bamboo("SW"));
+      put(g, 5, 4, bamboo("SW"));
+      put(g, 6, 3, bamboo("SE"));
       return g;
     })(),
     deer: [],
-    solution: sol([1, 3, "SE"], [2, 4, "SW"]),
+    solution: sol([3, 4, "SW"], [4, 3, "SE"], [5, 4, "SW"], [6, 3, "SE"]),
   },
   {
     id: 13,
-    rows: 6,
+    rows: 8,
     cols: 7,
     drops: 1,
     need: 1,
     source: { r: 0, c: 2, facing: "SE" },
-    pond: { r: 4, c: 2 },
+    pond: { r: 7, c: 3 },
     grid: (() => {
-      const g = emptyGrid(6, 7);
-      put(g, 1, 3, bamboo("SE"));
-      put(g, 2, 4, sozu("SE", 1));
-      put(g, 3, 3, rock());
+      const g = emptyGrid(8, 7);
+      put(g, 1, 3, split());
+      put(g, 2, 4, sozu("SE"));
       put(g, 3, 5, rock());
+      put(g, 2, 2, bamboo("SE"));
+      put(g, 3, 1, bamboo("SE"));
+      put(g, 4, 2, bamboo("SE"));
+      put(g, 5, 3, bamboo("SW"));
+      put(g, 6, 2, bamboo("SE"));
       return g;
     })(),
-    deer: [{ id: "d1", r: 4, c: 2, flee: { r: 4, c: 0 } }],
-    solution: sol([1, 3, "SE"], [2, 4, "SW"]),
+    deer: [{ id: "d1", r: 2, c: 5, flee: { r: 5, c: 6 } }],
+    solution: sol([2, 2, "SW"]),
   },
   {
     id: 14,
     rows: 7,
-    cols: 9,
-    drops: 2,
+    cols: 8,
+    drops: 1,
     need: 1,
-    source: { r: 0, c: 4, facing: "SE" },
-    pond: { r: 5, c: 3 },
+    source: { r: 0, c: 3, facing: "SE" },
+    pond: { r: 4, c: 3 },
     grid: (() => {
-      const g = emptyGrid(7, 9);
-      put(g, 1, 5, split());
-      put(g, 2, 6, sozu("SE", 1));
-      put(g, 2, 4, bamboo("SW"));
-      put(g, 3, 5, bamboo("SE"));
-      put(g, 4, 4, bamboo("SW"));
-      put(g, 3, 7, rock());
+      const g = emptyGrid(7, 8);
+      put(g, 1, 4, split());
+      put(g, 2, 5, bamboo("SW"));
+      put(g, 3, 4, bamboo("SW"));
+      put(g, 2, 3, bamboo("SE"));
+      put(g, 3, 2, sozu("SW"));
+      put(g, 4, 1, rock());
       return g;
     })(),
-    deer: [{ id: "d1", r: 4, c: 4, flee: { r: 4, c: 2 } }],
-    solution: sol(
-      [2, 6, "SW"],
-      [2, 4, "SE"],
-      [3, 5, "SW"],
-      [4, 4, "SW"],
-    ),
+    deer: [{ id: "d1", r: 4, c: 3, flee: { r: 4, c: 6 } }],
+    solution: sol([2, 3, "SW"]),
   },
   {
     id: 15,
     rows: 7,
-    cols: 10,
-    drops: 4,
-    need: 1,
-    source: { r: 0, c: 4, facing: "SE" },
-    pond: { r: 5, c: 7 },
-    grid: (() => {
-      const g = emptyGrid(7, 10);
-      put(g, 1, 5, split());
-      put(g, 2, 6, bamboo("SE"));
-      put(g, 3, 7, sozu("SE", 2));
-      put(g, 2, 4, bamboo("SW"));
-      put(g, 3, 5, bamboo("SE"));
-      put(g, 4, 6, bamboo("SE"));
-      put(g, 4, 8, rock());
-      return g;
-    })(),
-    deer: [{ id: "d1", r: 4, c: 6, flee: { r: 4, c: 4 } }],
-    solution: sol(
-      [2, 6, "SE"],
-      [3, 7, "SE"],
-      [2, 4, "SE"],
-      [3, 5, "SE"],
-      [4, 6, "SE"],
-    ),
-  },
-  {
-    id: 16,
-    rows: 6,
     cols: 8,
-    drops: 2,
+    drops: 1,
     need: 1,
     source: { r: 0, c: 3, facing: "SE" },
-    pond: { r: 4, c: 1 },
+    pond: { r: 4, c: 3 },
     grid: (() => {
-      const g = emptyGrid(6, 8);
-      put(g, 1, 4, bamboo("SE"));
-      put(g, 2, 5, sozu("SW", 2));
-      put(g, 2, 3, sozu("SW", 2));
-      put(g, 3, 4, rock());
+      const g = emptyGrid(7, 8);
+      put(g, 1, 4, split());
+      put(g, 2, 5, bamboo("SE"));
+      put(g, 3, 4, bamboo("SW"));
+      put(g, 2, 3, bamboo("SE"));
+      put(g, 3, 2, sozu("SW"));
+      put(g, 4, 1, rock());
       put(g, 3, 6, rock());
       return g;
     })(),
-    deer: [{ id: "d1", r: 4, c: 1, flee: { r: 5, c: 0 } }],
-    solution: sol([1, 4, "SW"], [2, 5, "SW"], [2, 3, "SW"]),
+    deer: [{ id: "d1", r: 4, c: 3, flee: { r: 4, c: 6 } }],
+    solution: sol([2, 5, "SW"], [2, 3, "SW"]),
+  },
+  {
+    id: 16,
+    rows: 7,
+    cols: 9,
+    drops: 1,
+    need: 1,
+    source: { r: 0, c: 3, facing: "SE" },
+    pond: { r: 4, c: 3 },
+    grid: (() => {
+      const g = emptyGrid(7, 9);
+      put(g, 1, 4, split());
+      put(g, 2, 5, split());
+      put(g, 3, 6, sozu("SE"));
+      put(g, 4, 7, rock());
+      put(g, 3, 4, bamboo("SW"));
+      put(g, 2, 3, bamboo("SE"));
+      put(g, 3, 2, sozu("SW"));
+      put(g, 4, 1, rock());
+      return g;
+    })(),
+    deer: [{ id: "d1", r: 4, c: 3, flee: { r: 5, c: 7 } }],
+    solution: sol([2, 3, "SW"]),
   },
 ];
 
